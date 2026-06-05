@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal do Aluno</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen flex flex-col">
+
+  <header class="bg-blue-600 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
+    <h1 class="text-xl font-bold tracking-wide">📋 Notas Finais</h1>
+    <button onclick="baixarJSON()" class="bg-blue-800 hover:bg-blue-900 px-3 py-1.5 rounded-lg text-sm font-semibold transition flex items-center gap-1">
+      📥 Baixar JSON
+    </button>
+  </header>
+
+  <main class="flex-1 p-4 max-w-md mx-auto w-full">
+    <div id="lista-alunos" class="space-y-3">
+      <p class="text-center text-gray-500 py-8">Carregando alunos...</p>
+    </div>
+  </main>
+
+  <script>
+    async function carregarAlunos() {
+      const res = await fetch('/api/alunos');
+      const alunos = await res.json();
+      const container = document.getElementById('lista-alunos');
+
+      if (alunos.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white p-6 rounded-xl shadow-sm text-center text-gray-500 border border-gray-200">
+            ⚠️ Nenhum aluno cadastrado no momento.
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = alunos.map(aluno => `
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-between gap-2">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-gray-400">ID: #${aluno.id}</span>
+            <span class="text-lg font-bold text-gray-800">${aluno.nome}</span>
+          </div>
+          <hr class="border-gray-100">
+          <div class="grid grid-cols-3 gap-2 text-center text-sm">
+            <div class="bg-gray-50 p-2 rounded-lg">
+              <span class="block text-xs text-gray-500">Trabalho</span>
+              <span class="font-semibold text-gray-700">${aluno.trabalho}</span>
+            </div>
+            <div class="bg-gray-50 p-2 rounded-lg">
+              <span class="block text-xs text-gray-500">Prova</span>
+              <span class="font-semibold text-gray-700">${aluno.prova}</span>
+            </div>
+            <div class="p-2 rounded-lg ${aluno.media >= 7 ? 'bg-green-50 text-green-700' : aluno.media > 0 ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-700'}">
+              <span class="block text-xs text-gray-500">Média</span>
+              <span class="font-bold">${aluno.media}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // NOVA FUNÇÃO: Faz o download silencioso do JSON atualizado
+    async function baixarJSON() {
+      try {
+        // Pega os dados mais recentes do servidor
+        const res = await fetch('/api/alunos');
+        const alunos = await res.json();
+        
+        // Transforma de volta em string JSON formatada
+        const jsonString = JSON.stringify(alunos, null, 2);
+        
+        // Cria um "arquivo virtual" no navegador
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Cria um link invisível, clica nele e depois apaga
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'alunos_backup.json'; // Nome do arquivo que será salvo
+        document.body.appendChild(a);
+        a.click();
+        
+        // Limpeza
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        alert("Erro ao tentar baixar o arquivo JSON.");
+        console.error(error);
+      }
+    }
+
+    // Executa ao carregar a página
+    carregarAlunos();
+  </script>
+</body>
+</html>

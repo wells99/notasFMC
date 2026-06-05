@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Controle</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 font-sans min-h-screen flex flex-col">
+
+  <header class="bg-gray-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
+    <h1 class="text-xl font-bold">⚙️ Painel Gestor</h1>
+    <a href="/" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg text-sm font-semibold transition">Voltar</a>
+  </header>
+
+  <main class="flex-1 p-4 max-w-md mx-auto w-full space-y-6">
+    
+    <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+      <h2 class="text-md font-bold text-gray-700 mb-3">1. Novo Aluno</h2>
+      <form id="form-cadastro" class="space-y-3">
+        <input type="text" id="cad-nome" placeholder="Nome do Aluno" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="number" step="0.1" id="cad-trabalho" placeholder="Nota do Trabalho" required class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        <button type="submit" class="w-full bg-blue-600 text-white p-2.5 rounded-lg font-bold text-sm active:bg-blue-700 transition">Salvar Aluno</button>
+      </form>
+    </section>
+
+    <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+      <h2 class="text-md font-bold text-gray-700 mb-3">2. Lançar Nota da Prova</h2>
+      <div id="lista-gerenciamento" class="space-y-3">
+        </div>
+    </section>
+
+    <section>
+      <button onclick="calcularMedias()" class="w-full bg-green-600 active:bg-green-700 text-white py-3.5 rounded-xl font-bold text-md shadow-md transition">
+        🧮 Calcular Todas as Médias
+      </button>
+    </section>
+
+  </main>
+
+  <script>
+    async function carregarPainel() {
+      const res = await fetch('/api/alunos');
+      const alunos = await res.json();
+      const container = document.getElementById('lista-gerenciamento');
+
+      if (alunos.length === 0) {
+        container.innerHTML = `<p class="text-xs text-gray-400 text-center py-2">Nenhum aluno para alterar.</p>`;
+        return;
+      }
+
+      container.innerHTML = alunos.map(aluno => `
+        <div class="p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between gap-2">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-bold text-gray-800 truncate">${aluno.nome}</p>
+            <p class="text-xs text-gray-400">Trab: ${aluno.trabalho} | Prova atual: ${aluno.prova}</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <input type="number" step="0.1" id="prova-${aluno.id}" value="${aluno.prova}" class="w-16 p-1.5 text-center border border-gray-300 rounded-md text-sm bg-white">
+            <button onclick="salvarNotaProva(${aluno.id})" class="bg-gray-800 text-white text-xs px-2.5 py-2 rounded-md font-medium active:bg-gray-900">OK</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Handler Cadastro
+    document.getElementById('form-cadastro').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nome = document.getElementById('cad-nome').value;
+      const trabalho = document.getElementById('cad-trabalho').value;
+
+      await fetch('/api/alunos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, trabalho })
+      });
+
+      document.getElementById('form-cadastro').reset();
+      carregarPainel();
+    });
+
+    // Handler Nota Individual
+    async function salvarNotaProva(id) {
+      const nota = document.getElementById(`prova-${id}`).value;
+      await fetch('/api/alunos/prova', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, prova: nota })
+      });
+      alert('Nota atualizada!');
+      carregarPainel();
+    }
+
+    // Handler Calcular Médias
+    async function calcularMedias() {
+      await fetch('/api/alunos/calcular-medias', { method: 'POST' });
+      alert('Todas as médias foram recalculadas com sucesso!');
+      carregarPainel();
+    }
+
+    carregarPainel();
+  </script>
+</body>
+</html>
